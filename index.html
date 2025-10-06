@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel-like Data Lookup Tool</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background-color: #1a73e8;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .nav-tabs {
+            display: flex;
+            background-color: #f1f1f1;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-weight: bold;
+            color: #555;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 3px solid #1a73e8;
+            color: #1a73e8;
+        }
+        .page {
+            display: none;
+            padding: 20px;
+            flex: 1;
+        }
+        .page.active {
+            display: block;
+        }
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #1a73e8;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .editable-cell {
+            min-height: 30px;
+            padding: 5px;
+            outline: none;
+        }
+        .editable-cell:focus {
+            background-color: #fff9c4;
+            border: 1px solid #1a73e8;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        button:hover {
+            background-color: #0d62d9;
+        }
+        .copy-btn {
+            background-color: #34a853;
+        }
+        .copy-btn:hover {
+            background-color: #2e8b47;
+        }
+        .clear-btn {
+            background-color: #ea4335;
+        }
+        .clear-btn:hover {
+            background-color: #d33426;
+        }
+        .save-btn {
+            background-color: #f9ab00;
+        }
+        .save-btn:hover {
+            background-color: #e09a00;
+        }
+        .instructions {
+            background-color: #e8f4fd;
+            border-left: 4px solid #1a73e8;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+        .data-table {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .status-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .success {
+            background-color: #e6f4ea;
+            color: #137333;
+            border: 1px solid #137333;
+        }
+        .error {
+            background-color: #fce8e6;
+            color: #c5221f;
+            border: 1px solid #c5221f;
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex-grow: 1;
+        }
+        .auto-fill-btn {
+            background-color: #673ab7;
+        }
+        .auto-fill-btn:hover {
+            background-color: #5e35b1;
+        }
+        .highlight {
+            background-color: #fff9c4;
+        }
+        
+        /* New Style for Quantity Adder */
+        .row-add-control {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .row-add-control input {
+            width: 50px;
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Excel-like Data Lookup Tool</h1>
+            <div class="button-group">
+                <button id="saveDataBtn" class="save-btn">
+                    <span>💾</span> Save Data
+                </button>
+            </div>
+        </header>
+        
+        <div class="nav-tabs">
+            <button class="tab active" data-page="page1">📊 Sheet 1 - Product Database</button>
+            <button class="tab" data-page="page2">🔍 Sheet 2 - Lookup Results</button>
+        </div>
+        
+        <div id="page1" class="page active">
+            <div class="instructions">
+                <strong>Instructions:</strong><br>
+                1. Enter or **paste data** in the table below (Multiple columns/rows supported!)<br>
+                2. Click "Save Data" to store the information<br>
+                3. Switch to "Sheet 2 - Lookup Results" to search for products
+            </div>
+            
+            <div class="section">
+                <div class="section-title">
+                    Product Database
+                    <div class="button-group">
+                        <div class="row-add-control">
+                            <input type="number" id="rowQtyInput" value="1" min="1" max="100">
+                            <button id="addMultipleRowsBtn" class="add-btn">
+                                <span>➕</span> Add Rows
+                            </button>
+                        </div>
+                        <button id="clearDataBtn" class="clear-btn">Clear All Data</button>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <table id="databaseTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>SKU</th>
+                                <th>shopify_barcode</th>
+                                <th>depoter_barcode</th>
+                                <th>Location</th>
+                                <th>Available qty</th>
+                                <th>Total Qty</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="databaseBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div id="page2" class="page">
+            <div class="instructions">
+                <strong>Instructions:</strong><br>
+                1. Paste SKUs, Shopify barcodes, or Depoter barcodes in the table below<br>
+                2. Click "Auto Fill Data" to automatically retrieve all matching information<br>
+                3. Copy the results to use in your reports
+            </div>
+            
+            <div class="section">
+                <div class="section-title">
+                    Lookup Table
+                    <div class="button-group">
+                        <button id="autoFillBtn" class="auto-fill-btn">🔄 Auto Fill Data</button>
+                        <button id="clearLookupBtn" class="clear-btn">Clear Lookup Table</button>
+                        <button id="copyResultsBtn" class="copy-btn">📋 Copy Results</button>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <table id="lookupTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>SKU</th>
+                                <th>shopify_barcode</th>
+                                <th>depoter_barcode</th>
+                                <th>Location</th>
+                                <th>Available Qty</th>
+                                <th>Total Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lookupBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+
+    <script>
+        // Data storage
+        let productDatabase = [];
+        const COLUMN_HEADERS = ['name', 'sku', 'shopify_barcode', 'depoter_barcode', 'location', 'warehouse', 'total_qty'];
+        
+        // DOM elements
+        const databaseBody = document.getElementById('databaseBody');
+        const lookupBody = document.getElementById('lookupBody');
+        const tabs = document.querySelectorAll('.tab');
+        const pages = document.querySelectorAll('.page');
+        const statusMessage = document.getElementById('statusMessage');
+        const rowQtyInput = document.getElementById('rowQtyInput'); // New
+        
+        // Buttons
+        const addMultipleRowsBtn = document.getElementById('addMultipleRowsBtn'); // Changed from addRowBtn
+        const clearDataBtn = document.getElementById('clearDataBtn');
+        const saveDataBtn = document.getElementById('saveDataBtn');
+        const autoFillBtn = document.getElementById('autoFillBtn');
+        const clearLookupBtn = document.getElementById('clearLookupBtn');
+        const copyResultsBtn = document.getElementById('copyResultsBtn');
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedData();
+            // Render existing data, or one empty row if DB is empty
+            renderDatabaseTable(); 
+            initializeLookupTable();
+            setupEventListeners();
+        });
+        
+        function setupEventListeners() {
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const pageId = this.getAttribute('data-page');
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    pages.forEach(page => page.classList.remove('active'));
+                    document.getElementById(pageId).classList.add('active');
+                });
+            });
+            
+            // Database buttons
+            addMultipleRowsBtn.addEventListener('click', addMultipleDatabaseRows); // Updated
+            clearDataBtn.addEventListener('click', clearDatabase);
+            saveDataBtn.addEventListener('click', saveData);
+            databaseBody.addEventListener('paste', handlePaste); // Added Paste Listener
+            
+            // Lookup buttons
+            autoFillBtn.addEventListener('click', autoFillData);
+            clearLookupBtn.addEventListener('click', clearLookupTable);
+            copyResultsBtn.addEventListener('click', copyResults);
+        }
+
+        // --- NEW/UPDATED CORE FUNCTIONS ---
+
+        // Function to create a single row element
+        function createDatabaseRow() {
+            const row = document.createElement('tr');
+            let innerHTML = '';
+            
+            COLUMN_HEADERS.forEach(() => {
+                innerHTML += '<td><div class="editable-cell" contenteditable="true"></div></td>';
+            });
+            
+            innerHTML += '<td><button class="delete-row-btn clear-btn">Delete</button></td>';
+            row.innerHTML = innerHTML;
+            
+            // Add event listener to delete button
+            const deleteBtn = row.querySelector('.delete-row-btn');
+            deleteBtn.addEventListener('click', function() {
+                if (databaseBody.children.length > 1) {
+                    row.remove();
+                    // Save data immediately after deletion
+                    saveData();
+                } else {
+                    showMessage('Cannot delete the last row', 'error');
+                }
+            });
+            
+            return row;
+        }
+        
+        function renderDatabaseTable() {
+            databaseBody.innerHTML = '';
+            
+            if (productDatabase.length === 0) {
+                // If no data, add one empty row
+                databaseBody.appendChild(createDatabaseRow());
+            } else {
+                // Render data from memory/localStorage
+                productDatabase.forEach(product => {
+                    const row = createDatabaseRow();
+                    const cells = row.querySelectorAll('.editable-cell');
+                    
+                    COLUMN_HEADERS.forEach((key, index) => {
+                        cells[index].textContent = product[key] || '';
+                    });
+                    
+                    databaseBody.appendChild(row);
+                });
+            }
+        }
+
+        function addMultipleDatabaseRows() {
+            const qty = parseInt(rowQtyInput.value) || 1;
+            
+            if (qty < 1 || qty > 100) {
+                showMessage("Please enter a valid number of rows (1 to 100).", 'error');
+                return;
+            }
+
+            let firstNewCell = null;
+            for (let i = 0; i < qty; i++) {
+                const newRow = createDatabaseRow();
+                databaseBody.appendChild(newRow);
+                if (i === 0) {
+                    firstNewCell = newRow.querySelector('.editable-cell');
+                }
+            }
+            
+            // Scroll to the new rows and focus on the first cell
+            if (firstNewCell) {
+                firstNewCell.focus();
+                // Clear the quantity box after adding
+                rowQtyInput.value = 1;
+                showMessage(`${qty} rows added successfully.`, 'success');
+            }
+        }
+        
+        function handlePaste(e) {
+            // Check if the paste event occurred on a contenteditable cell within the database table
+            const targetCell = e.target.closest('.editable-cell');
+            if (!targetCell) return;
+            
+            // Prevent the default paste action (which would put everything in one cell)
+            e.preventDefault();
+            
+            const clipboardData = e.clipboardData || window.clipboardData;
+            const pastedData = clipboardData.getData('Text');
+            
+            // Separate data by rows (newline \n) and columns (tab \t)
+            const rowsData = pastedData.trim().split('\n').map(row => row.trim().split('\t'));
+            
+            // Find the starting row and column index
+            const tableRow = targetCell.closest('tr');
+            const tableBody = tableRow.closest('tbody');
+            const rowIndex = Array.from(tableBody.children).indexOf(tableRow);
+            const cellIndex = Array.from(tableRow.querySelectorAll('td .editable-cell')).indexOf(targetCell);
+            
+            rowsData.forEach((rowData, rIndex) => {
+                const currentRowIndex = rowIndex + rIndex;
+                let currentRow = tableBody.children[currentRowIndex];
+                
+                // If the current row doesn't exist, create a new one
+                if (!currentRow) {
+                    const newRow = createDatabaseRow();
+                    tableBody.appendChild(newRow);
+                    currentRow = newRow;
+                }
+                
+                const cells = currentRow.querySelectorAll('td .editable-cell');
+                
+                rowData.forEach((cellData, cIndex) => {
+                    const currentCellIndex = cellIndex + cIndex;
+                    
+                    // Only paste if the target cell exists within our defined columns (7 columns)
+                    if (currentCellIndex < COLUMN_HEADERS.length && cells[currentCellIndex]) {
+                        cells[currentCellIndex].textContent = cellData;
+                    }
+                });
+            });
+            
+            // After pasting, automatically save the data
+            saveData();
+            
+            // Optional: Re-focus on the original cell
+            targetCell.focus();
+            showMessage(`Pasted data for ${rowsData.length} row(s) and auto-saved.`, 'success');
+        }
+
+        // --- EXISTING FUNCTIONS (Modified for consistency) ---
+
+        function initializeLookupTable() {
+            // Ensure at least one row exists
+            if (lookupBody.children.length === 0) {
+                addLookupRow();
+            }
+        }
+        
+        function addLookupRow() {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><div class="editable-cell" contenteditable="true"></div></td>
+                <td><div class="editable-cell lookup-input" contenteditable="true"></div></td>
+                <td><div class="editable-cell lookup-input" contenteditable="true"></div></td>
+                <td><div class="editable-cell lookup-input" contenteditable="true"></div></td>
+                <td><div class="editable-cell" contenteditable="true"></div></td>
+                <td><div class="editable-cell" contenteditable="true"></div></td>
+                <td><div class="editable-cell" contenteditable="true"></div></td>
+            `;
+            
+            lookupBody.appendChild(row);
+            
+            // Add event listener to automatically add new row when user tabs through the last cell
+            const cells = row.querySelectorAll('.editable-cell');
+            cells.forEach((cell, index) => {
+                cell.addEventListener('keydown', function(e) {
+                    // Check if it's a tab key press and if it's the last cell of the last row
+                    if (e.key === 'Tab' && !e.shiftKey && index === cells.length - 1 && 
+                        row === lookupBody.lastChild) {
+                        
+                        // Check if at least one input cell has content before adding a new row
+                        const hasContent = Array.from(row.querySelectorAll('.lookup-input')).some(c => c.textContent.trim() !== '');
+
+                        if (hasContent || !lookupBody.lastChild.previousSibling) { // Always add a row if it's the very first row
+                            e.preventDefault();
+                            addLookupRow();
+                            // Focus on first cell of new row
+                            setTimeout(() => {
+                                lookupBody.lastChild.querySelector('.editable-cell').focus();
+                            }, 10);
+                        }
+                    }
+                });
+                 // Added paste listener for lookup table too, for consistency.
+                cell.addEventListener('paste', handleLookupPaste);
+            });
+        }
+        
+        function handleLookupPaste(e) {
+            const targetCell = e.target.closest('.editable-cell');
+            if (!targetCell) return;
+            
+            e.preventDefault();
+            
+            const clipboardData = e.clipboardData || window.clipboardData;
+            const pastedData = clipboardData.getData('Text');
+            
+            const rowsData = pastedData.trim().split('\n').map(row => row.trim().split('\t'));
+            
+            const tableRow = targetCell.closest('tr');
+            const tableBody = tableRow.closest('tbody');
+            const rowIndex = Array.from(tableBody.children).indexOf(tableRow);
+            const cellIndex = Array.from(tableRow.querySelectorAll('td .editable-cell')).indexOf(targetCell);
+
+            rowsData.forEach((rowData, rIndex) => {
+                const currentRowIndex = rowIndex + rIndex;
+                let currentRow = tableBody.children[currentRowIndex];
+                
+                if (!currentRow) {
+                    currentRow = createLookupRow(); // Helper for adding lookup rows, defined below
+                    tableBody.appendChild(currentRow);
+                }
+                
+                const cells = currentRow.querySelectorAll('td .editable-cell');
+                
+                rowData.forEach((cellData, cIndex) => {
+                    const currentCellIndex = cellIndex + cIndex;
+                    if (currentCellIndex < cells.length && cells[currentCellIndex]) {
+                        cells[currentCellIndex].textContent = cellData;
+                    }
+                });
+            });
+            
+            targetCell.focus();
+        }
+
+        function createLookupRow() {
+             const row = document.createElement('tr');
+             row.innerHTML = `
+                <td><div class="editable-cell" contenteditable="true"></div></td>
+                <td><div class="editable-cell lookup-input" contenteditable="true"></div></td>
+                <td><div class="editable-cell lookup-input" contenteditable="true"></div></td>
+                <td><div class="editable-cell lookup-input" contenteditable="true"></div></td>
+                <td><div class="editable-cell" contenteditable="true"></div></td>
+                <td><div class="editable-cell" contenteditable="true"></div></td>
+                <td><div class="editable-cell" contenteditable="true"></div></td>
+            `;
+            return row;
+        }
+
+        function clearDatabase() {
+            if (confirm('Are you sure you want to clear all data? This will delete ALL SAVED PRODUCTS.')) {
+                productDatabase = [];
+                localStorage.removeItem('productDatabase');
+                renderDatabaseTable(); // Re-render with one empty row
+                showMessage('Database cleared successfully', 'success');
+            }
+        }
+        
+        function clearLookupTable() {
+            if (confirm('Are you sure you want to clear the lookup table?')) {
+                lookupBody.innerHTML = '';
+                addLookupRow();
+                showMessage('Lookup table cleared successfully', 'success');
+            }
+        }
+        
+        function saveData() {
+            const rows = databaseBody.querySelectorAll('tr');
+            const data = [];
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('.editable-cell');
+                // Skip completely empty rows
+                const isRowEmpty = Array.from(cells).every(cell => cell.textContent.trim() === '');
+                if (isRowEmpty) return;
+
+                const product = {};
+                
+                COLUMN_HEADERS.forEach((key, index) => {
+                    product[key] = cells[index] ? cells[index].textContent.trim() : '';
+                });
+                
+                data.push(product);
+            });
+            
+            // Update database and save to localStorage
+            productDatabase = data;
+            localStorage.setItem('productDatabase', JSON.stringify(productDatabase));
+            
+            // Re-render to ensure any empty rows were removed upon saving
+            renderDatabaseTable(); 
+            
+            showMessage(`Data saved successfully! ${productDatabase.length} products in database.`, 'success');
+        }
+        
+        function loadSavedData() {
+            const savedData = localStorage.getItem('productDatabase');
+            if (savedData) {
+                try {
+                    productDatabase = JSON.parse(savedData);
+                    showMessage(`Loaded ${productDatabase.length} products from storage`, 'success');
+                } catch (e) {
+                    console.error('Error loading saved data:', e);
+                    showMessage('Error loading saved data', 'error');
+                }
+            }
+        }
+        
+        function autoFillData() {
+            if (productDatabase.length === 0) {
+                showMessage('No product data available. Please add data to Sheet 1 and save.', 'error');
+                return;
+            }
+            
+            const rows = lookupBody.querySelectorAll('tr');
+            let filledCount = 0;
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('.editable-cell');
+                const sku = cells[1].textContent.trim();
+                const shopifyBarcode = cells[2].textContent.trim();
+                const depoterBarcode = cells[3].textContent.trim();
+                
+                // Skip if no search criteria
+                if (!sku && !shopifyBarcode && !depoterBarcode) return;
+                
+                // Find matching product
+                const match = productDatabase.find(product => 
+                    (sku && product.sku === sku) || 
+                    (shopifyBarcode && product.shopify_barcode === shopifyBarcode) || 
+                    (depoterBarcode && product.depoter_barcode === depoterBarcode)
+                );
+                
+                if (match) {
+                    // Fill in the data (index 0 is name, 4 is location, 5 is warehouse, 6 is qty)
+                    cells[0].textContent = match.name;
+                    cells[4].textContent = match.location;
+                    cells[5].textContent = match.warehouse;
+                    cells[6].textContent = match.total_qty;
+                    
+                    // Fill in any missing identifiers
+                    if (!sku && match.sku) cells[1].textContent = match.sku;
+                    if (!shopifyBarcode && match.shopify_barcode) cells[2].textContent = match.shopify_barcode;
+                    if (!depoterBarcode && match.depoter_barcode) cells[3].textContent = match.depoter_barcode;
+                    
+                    filledCount++;
+                    
+                    // Highlight the row to show it was filled
+                    row.classList.add('highlight');
+                    setTimeout(() => row.classList.remove('highlight'), 1000);
+                }
+            });
+            
+            if (filledCount > 0) {
+                showMessage(`Auto-filled data for ${filledCount} products`, 'success');
+            } else {
+                showMessage('No matching products found for the provided identifiers', 'error');
+            }
+        }
+        
+        function copyResults() {
+            const rows = lookupBody.querySelectorAll('tr');
+            if (rows.length === 0) {
+                showMessage('No data to copy', 'error');
+                return;
+            }
+            
+            // Generate header row
+            let csvContent = "Name\tSKU\tshopify_barcode\tdepoter_barcode\tLocation\tWarehouse\tTotal Qty\n";
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('.editable-cell');
+                // Only copy if the row is not completely empty
+                const isRowEmpty = Array.from(cells).every(cell => cell.textContent.trim() === '');
+                if (isRowEmpty) return;
+
+                const rowData = Array.from(cells).map(cell => cell.textContent.trim()).join('\t');
+                csvContent += rowData + '\n';
+            });
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(csvContent)
+                .then(() => showMessage('Results copied to clipboard! (Tab-separated for Excel/Sheets)', 'success'))
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showMessage('Failed to copy results. Please try again.', 'error');
+                });
+        }
+        
+        function showMessage(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.style.display = 'block';
+            
+            // Hide message after 3 seconds
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
